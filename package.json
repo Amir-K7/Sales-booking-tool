@@ -1,0 +1,57 @@
+{
+  "name": "sales-booking-tool",
+  "version": "1.0.0",
+  "description": "Modern sales management and booking tool with AI-powered features",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "client:dev": "cd frontend && npm run dev",
+    "server:dev": "cd backend && npm run dev",
+    "client:build": "cd frontend && npm run build",
+    "server:build": "cd backend && npm run build",
+    "build": "npm run client:build && npm run server:build",
+    "start": "cd backend && npm start",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "test": "concurrently \"cd frontend && npm test\" \"cd backend && npm test\"",
+    "lint": "concurrently \"cd frontend && npm run lint\" \"cd backend && npm run lint\"",
+    "type-check": "concurrently \"cd frontend && npm run type-check\" \"cd backend && npm run type-check\"",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:seed": "cd backend && npm run db:seed",
+    "db:reset": "cd backend && npm run db:reset"
+  },
+  "keywords": [
+    "sales",
+    "crm",
+    "booking",
+    "lead-management",
+    "ai",
+    "typescript",
+    "react",
+    "nodejs",
+    "postgresql"
+  ],
+  "author": "Sales Tool Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "lint-staged": {
+    "**/*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "**/*.{json,css,scss,md}": [
+      "prettier --write"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/sales-booking-tool.git"
+  }
+}
