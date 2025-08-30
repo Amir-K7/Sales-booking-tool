@@ -1,0 +1,343 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String?
+  firstName         String
+  lastName          String
+  avatar            String?
+  role              Role     @default(SALES_REP)
+  isActive          Boolean  @default(true)
+  emailVerified     Boolean  @default(false)
+  emailVerifiedAt   DateTime?
+  lastLogin         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // OAuth fields
+  googleId          String?
+  microsoftId       String?
+
+  // Relationships
+  createdLeads      Lead[]   @relation("LeadCreatedBy")
+  assignedLeads     Lead[]   @relation("LeadAssignedTo")
+  deals             Deal[]
+  activities        Activity[]
+  tasks             Task[]
+  notifications     Notification[]
+  bookings          Booking[]
+  teamMemberships   TeamMember[]
+
+  @@map("users")
+}
+
+model Lead {
+  id              String     @id @default(cuid())
+  firstName       String
+  lastName        String
+  email           String     @unique
+  phone           String?
+  company         String?
+  jobTitle        String?
+  source          LeadSource @default(MANUAL)
+  status          LeadStatus @default(NEW)
+  score           Int        @default(0)
+  notes           String?
+  linkedinUrl     String?
+  website         String?
+  industry        String?
+  companySize     String?
+  estimatedValue  Float?
+  
+  // Timestamps
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  lastContactedAt DateTime?
+  
+  // Foreign Keys
+  createdById     String
+  assignedToId    String?
+  
+  // Relationships
+  createdBy       User       @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  assignedTo      User?      @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  activities      Activity[]
+  deal            Deal?
+  bookings        Booking[]
+  customFields    LeadCustomField[]
+
+  @@map("leads")
+}
+
+model Deal {
+  id              String     @id @default(cuid())
+  title           String
+  description     String?
+  value           Float
+  stage           DealStage  @default(QUALIFICATION)
+  probability     Int        @default(0)
+  expectedCloseDate DateTime?
+  actualCloseDate DateTime?
+  notes           String?
+  lostReason      String?
+  
+  // Timestamps
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  // Foreign Keys
+  leadId          String     @unique
+  assignedToId    String
+  
+  // Relationships
+  lead            Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedTo      User       @relation(fields: [assignedToId], references: [id])
+  activities      Activity[]
+  tasks           Task[]
+
+  @@map("deals")
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  title       String
+  description String?
+  outcome     String?
+  duration    Int?         // in minutes
+  scheduledAt DateTime?
+  completedAt DateTime?
+  
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  // Foreign Keys
+  leadId      String?
+  dealId      String?
+  userId      String
+  
+  // Relationships
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id])
+
+  @@map("activities")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  dueDate     DateTime?
+  completedAt DateTime?
+  
+  // Timestamps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Foreign Keys
+  dealId      String?
+  assignedToId String
+  
+  // Relationships
+  deal        Deal?      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  assignedTo  User       @relation(fields: [assignedToId], references: [id])
+
+  @@map("tasks")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  title           String
+  description     String?
+  startTime       DateTime
+  endTime         DateTime
+  meetingType     MeetingType   @default(VIDEO_CALL)
+  meetingLink     String?
+  location        String?
+  status          BookingStatus @default(SCHEDULED)
+  attendeeEmail   String?
+  attendeeName    String?
+  attendeePhone   String?
+  notes           String?
+  reminderSent    Boolean       @default(false)
+  
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Foreign Keys
+  leadId          String?
+  userId          String
+  
+  // Relationships
+  lead            Lead?         @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  user            User          @relation(fields: [userId], references: [id])
+
+  @@map("bookings")
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean      @default(true)
+  
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  // Relationships
+  members     TeamMember[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+  
+  // Foreign Keys
+  userId    String
+  teamId    String
+  
+  // Relationships
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@map("team_members")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  data      Json?
+  
+  // Timestamps
+  createdAt DateTime         @default(now())
+  
+  // Foreign Keys
+  userId    String
+  
+  // Relationships
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model LeadCustomField {
+  id      String @id @default(cuid())
+  key     String
+  value   String
+  type    String @default("text")
+  
+  // Foreign Keys
+  leadId  String
+  
+  // Relationships
+  lead    Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@unique([leadId, key])
+  @@map("lead_custom_fields")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  MANAGER
+  SALES_REP
+  MARKETING
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL_MEDIA
+  EMAIL_CAMPAIGN
+  COLD_CALL
+  TRADE_SHOW
+  PARTNER
+  MANUAL
+  IMPORT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+  ON_HOLD
+}
+
+enum DealStage {
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  TASK
+  NOTE
+  PROPOSAL_SENT
+  FOLLOW_UP
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum MeetingType {
+  IN_PERSON
+  VIDEO_CALL
+  PHONE_CALL
+}
+
+enum BookingStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  REMINDER
+}
